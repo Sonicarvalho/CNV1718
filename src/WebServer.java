@@ -17,6 +17,8 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunning
 public class WebServer {
 
 	private static ExecutorService executor;
+	
+	private static long previous = 0;
 
 	public static void main(String[] args) throws Exception {
 		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
@@ -26,10 +28,10 @@ public class WebServer {
 		server.createContext("/test", new MyHandler());
 		server.setExecutor(executor); // creates a default executor
 		server.start();
-		
-		
-		
-		
+
+
+
+
 	}
 
 	static class MyHandler implements HttpHandler {
@@ -37,10 +39,16 @@ public class WebServer {
 		public void handle(HttpExchange t) throws IOException {
 			String response = "This was the query:" + t.getRequestURI().getQuery() 
 					+ "##";
-			
-			System.out.println(response);
-			
-			String [] parts = t.getRequestURI().getQuery().split(" ");
+
+			//System.out.println(response);
+
+			String query = t.getRequestURI().getQuery();
+
+
+
+			String [] parts = query.split("&");
+			parts[6] = "../"+parts[6];
+			parts[7] = "../"+parts[7];
 			if (parts.length < 8){
 				response = "InsuficientArguments - The maze runners do not have enough information to solve the maze";
 				System.out.println("Bad Query");
@@ -50,21 +58,39 @@ public class WebServer {
 				os.close();
 				return;
 			}
-			
-			
+
+
 			try {
+				Runtime runtime = Runtime.getRuntime();
+
+				runtime.gc();
+
+				long startTime = System.currentTimeMillis();
 				Main.main(parts);
-			} catch (InvalidMazeRunningStrategyException | InvalidCoordinatesException | CantGenerateOutputFileException
+				long estimatedTime = System.currentTimeMillis() - startTime;
+
+				long memory = runtime.totalMemory() - runtime.freeMemory();
+
+				response = query.replaceAll("&", " ") + " | Time : "+estimatedTime+"ms | Memory : "+(memory/(1024L * 1024L))+"mb";
+
+				System.out.println(response);
+				
+				
+				//				System.out.println("Estimated time to run Maze" + parts[6] + "Start Pos: " + parts[0]+","+ parts[1] +
+				//																			 "End Pos: " + parts[2]+","+ parts[3] + " : "+ estimatedTime+"ms");
+			} catch (InvalidMazeRunningStrategyException | CantGenerateOutputFileException
 					| CantReadMazeInputFileException e) {
 				e.printStackTrace();
+			}catch (InvalidCoordinatesException e) {
+				System.out.println("Invalid Input : " + query);
 			}
-			
+
 			t.sendResponseHeaders(200, response.length());
 			OutputStream os = t.getResponseBody();
 			os.write(response.getBytes());
 			os.close();
-			
-			
+
+
 		}
 	}
 
