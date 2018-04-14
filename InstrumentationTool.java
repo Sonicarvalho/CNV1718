@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InstrumentationTool {
 	private static PrintStream out = null;
 	private static ConcurrentHashMap<Long, Metrics> metricsPerThread = new ConcurrentHashMap();
+	private static String Parameters;
 	
 	static class Metrics {
 		public int i_count;
@@ -65,7 +66,7 @@ public class InstrumentationTool {
 			int in_count = stuff.i_count;
 			int bb_count = stuff.b_count;
 			int me_count = stuff.m_count;
-			String aux = "Thread: " + String.valueOf(threadId) /*+ " | Instructions: " + String.valueOf(in_count) + 
+			String aux = Parameters + "Thread: " + String.valueOf(threadId) /*+ " | Instructions: " + String.valueOf(in_count) + 
 					" | Blocks: " + String.valueOf(bb_count) */+ " | Methods: " + String.valueOf(me_count);
 			loggerAux.add(aux);
 		}
@@ -107,5 +108,10 @@ public class InstrumentationTool {
     	
     	metricsPerThread.put(threadId, metric);
     }
+    
+    // Extra function to receive the query parameters and save them as the key on the table
+ 	public static void setValues(String queryParam) {
+ 		Parameters = queryParam;
+ 	}
     
 }

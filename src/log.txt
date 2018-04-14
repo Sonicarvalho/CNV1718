@@ -44,3 +44,4 @@ Thread: 18 | Methods: 44679
 Thread: 17 | Methods: 10003
 Thread: 15 | Methods: 43353
 Thread: 14 | Methods: 44679
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Methods: 44680

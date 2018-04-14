@@ -1,8 +1,7 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -19,23 +18,10 @@ import pt.ulisboa.tecnico.meic.cnv.mazerunner.maze.exceptions.InvalidMazeRunning
 public class WebServer {
 
 	private static ExecutorService executor;
-	
+
 	private static long previous = 0;
 
 	public static void main(String[] args) throws Exception {
-		
-		Process p = Runtime.getRuntime().exec("pwd");
-		p.waitFor();
-
-		BufferedReader reader = 
-		  new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-		String line = "";           
-		while ((line = reader.readLine())!= null) {
-		   System.out.println(line);
-		}
-		
-		
 		HttpServer server = HttpServer.create(new InetSocketAddress(8070), 0);
 
 		executor = Executors.newFixedThreadPool(10);
@@ -56,11 +42,14 @@ public class WebServer {
 			String query = t.getRequestURI().getQuery();
 
 			String response = "This was the query:" + query 
-								+ "##";
+					+ "##";
 
-			String [] parts;
+			String [] parts=null;
+
+			
 			
 			if (query == null || (parts = query.split("&")).length < 8){
+				
 				response = "InsuficientArguments - The maze runners do not have enough information to solve the maze";
 				System.out.println("Bad Query");
 				t.sendResponseHeaders(200, response.length());
@@ -70,9 +59,12 @@ public class WebServer {
 				return;
 			}
 			
-			parts[6] = "mazes/"+parts[6];
-			parts[7] = "mazes/"+parts[7];
-
+			
+			InstrumentationTool.setValues(Arrays.toString(parts));
+			
+			parts[6] = "../mazes/"+parts[6];
+			parts[7] = "../mazes/"+parts[7];
+			
 			try {
 				Runtime runtime = Runtime.getRuntime();
 
@@ -87,8 +79,8 @@ public class WebServer {
 				response = query.replaceAll("&", " ") + " | Time : "+estimatedTime+"ms | Memory : "+(memory/(1024L * 1024L))+"mb";
 
 				System.out.println(response);
-				
-				
+
+
 				//				System.out.println("Estimated time to run Maze" + parts[6] + "Start Pos: " + parts[0]+","+ parts[1] +
 				//																			 "End Pos: " + parts[2]+","+ parts[3] + " : "+ estimatedTime+"ms");
 			} catch (InvalidMazeRunningStrategyException | CantGenerateOutputFileException
