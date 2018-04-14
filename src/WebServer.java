@@ -1,4 +1,6 @@
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -21,7 +23,20 @@ public class WebServer {
 	private static long previous = 0;
 
 	public static void main(String[] args) throws Exception {
-		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+		
+		Process p = Runtime.getRuntime().exec("pwd");
+		p.waitFor();
+
+		BufferedReader reader = 
+		  new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+		String line = "";           
+		while ((line = reader.readLine())!= null) {
+		   System.out.println(line);
+		}
+		
+		
+		HttpServer server = HttpServer.create(new InetSocketAddress(8070), 0);
 
 		executor = Executors.newFixedThreadPool(10);
 
@@ -37,19 +52,15 @@ public class WebServer {
 	static class MyHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {
-			String response = "This was the query:" + t.getRequestURI().getQuery() 
-					+ "##";
-
-			//System.out.println(response);
 
 			String query = t.getRequestURI().getQuery();
 
+			String response = "This was the query:" + query 
+								+ "##";
 
-
-			String [] parts = query.split("&");
-			parts[6] = "../"+parts[6];
-			parts[7] = "../"+parts[7];
-			if (parts.length < 8){
+			String [] parts;
+			
+			if (query == null || (parts = query.split("&")).length < 8){
 				response = "InsuficientArguments - The maze runners do not have enough information to solve the maze";
 				System.out.println("Bad Query");
 				t.sendResponseHeaders(200, response.length());
@@ -58,7 +69,9 @@ public class WebServer {
 				os.close();
 				return;
 			}
-
+			
+			parts[6] = "mazes/"+parts[6];
+			parts[7] = "mazes/"+parts[7];
 
 			try {
 				Runtime runtime = Runtime.getRuntime();
