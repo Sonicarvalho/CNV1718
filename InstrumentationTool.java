@@ -18,11 +18,15 @@ public class InstrumentationTool {
 		public int i_count;
 		public int b_count;
 		public int m_count;
+		public int fieldacc_count;
+		public int memacc_count;
 		
-		public Metrics(int i_count, int b_count, int m_count){
+		public Metrics(int i_count, int b_count, int m_count,int facc_count,int memacc_count){
 			this.i_count = i_count;
 			this.b_count = b_count;
 			this.m_count = m_count;
+			this.fieldacc_count = facc_count;
+			this.memacc_count = memacc_count;
 		}
 	}
 	
@@ -30,6 +34,8 @@ public class InstrumentationTool {
 		//metricsPerThread = new ConcurrentHashMap();
         File file_in = new File(argv[0]);
         String infilenames[] = file_in.list();
+        BasicBlock basicBlock;
+		Instruction instruc;	
         
         for (int i = 0; i < infilenames.length; i++) {
             String infilename = infilenames[i];
@@ -47,6 +53,26 @@ public class InstrumentationTool {
 //                        BasicBlock bb = (BasicBlock) b.nextElement();
 //                        bb.addBefore("InstrumentationTool", "count", new Integer(bb.size()));
 //                    }
+					if(routine.getMethodName().equals("run") || routine.getMethodName().equals("solve")) {
+						routine.addBefore("InstrumentationTool", "mcount", new Integer(1));
+
+						for(Enumeration blocks = routine.getBasicBlocks().elements(); blocks.hasMoreElements(); ) {
+							basicBlock = (BasicBlock) blocks.nextElement();
+							basicBlock.addBefore("InstrumentationTool", "bcount", new Integer(basicBlock.size()));
+						}
+
+						for(Enumeration instrs = routine.getInstructionArray().elements(); instrs.hasMoreElements(); ) {
+							instruc = (Instruction) instrs.nextElement();
+							int opcode = instruc.getOpcode();
+							if(opcode == InstructionTable.getfield)
+								instruc.addBefore("InstrumentationTool", "facount", new Integer(1));
+							else {
+								short instr_type = InstructionTable.InstructionTypeTable[opcode];
+								if(instr_type == InstructionTable.LOAD_INSTRUCTION)
+									instruc.addBefore("InstrumentationTool", "macount", new Integer(1));
+							}
+						}
+					}
                 }
                 ci.addAfter("InstrumentationTool", "printInstrumentationTool", ci.getClassName());
                 ci.write(argv[1] + System.getProperty("file.separator") + infilename);
@@ -66,8 +92,11 @@ public class InstrumentationTool {
 			int in_count = stuff.i_count;
 			int bb_count = stuff.b_count;
 			int me_count = stuff.m_count;
-			String aux = Parameters + "Thread: " + String.valueOf(threadId) /*+ " | Instructions: " + String.valueOf(in_count) + 
-					" | Blocks: " + String.valueOf(bb_count) */+ " | Methods: " + String.valueOf(me_count);
+			int fieldacc_count = stuff.fieldacc_count;
+			int memacc_count =  stuff.fieldacc_count;
+			String aux = Parameters + "Thread: " + (threadId) + " | Instructions: " + (in_count) + 
+					" | Blocks: " +(bb_count) + " | Methods: " + (me_count) + " | Field Accesses: "+ (fieldacc_count) +
+					" | Memory Accesses: " + (memacc_count);
 			loggerAux.add(aux);
 		}
 		try {
@@ -84,7 +113,7 @@ public class InstrumentationTool {
     	Metrics metric;
     	
     	if(!metricsPerThread.containsKey(threadId))
-    		metric = new Metrics(incr,1,0);
+    		metric = new Metrics(incr,1,0,0,0);
     	else {
     		metric = metricsPerThread.get(threadId);
     		metric.i_count += incr;
@@ -100,7 +129,7 @@ public class InstrumentationTool {
     	Metrics metric;
     	
     	if(!metricsPerThread.containsKey(threadId))
-    		metric = 	new Metrics(0,0,1);
+    		metric = 	new Metrics(0,0,1,0,0);
     	else {
     		metric = metricsPerThread.get(threadId);
     		metric.m_count++;
@@ -108,7 +137,29 @@ public class InstrumentationTool {
     	
     	metricsPerThread.put(threadId, metric);
     }
-    
+    public static synchronized void facount(int incr) {
+		long threadId = Thread.currentThread().getId();
+		Metrics metric = metricsPerThread.get(threadId);
+		metric.fieldacc_count++;
+		metricsPerThread.put(threadId, metric);
+	}
+	
+		public static synchronized void bcount(int incr) {
+		long threadId = Thread.currentThread().getId();
+		Metrics metric = metricsPerThread.get(threadId);
+		metric.i_count += incr;
+		metric.b_count++;
+		metricsPerThread.put(threadId, metric);
+	}
+
+	// Updates metrics for each threadId (in case of load or store)
+	public static synchronized void macount(int incr) {
+		long threadId = Thread.currentThread().getId();
+		Metrics metric = metricsPerThread.get(threadId);
+		metric.memacc_count++;
+		metricsPerThread.put(threadId, metric);
+	}
+
     // Extra function to receive the query parameters and save them as the key on the table
  	public static void setValues(String queryParam) {
  		Parameters = queryParam;
