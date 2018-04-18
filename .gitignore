@@ -88,4 +88,6 @@ hs_err_pid*
 # End of https://www.gitignore.io/api/java,eclipse
 # Start of Sonic's gitignore
 *.html
+java-config-alameda.sh
+
 

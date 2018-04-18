@@ -50,3 +50,8 @@ Thread: 14 | Methods: 44679
 [3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 14 | Methods: 44680
 [3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Methods: 45919
 [3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: -781243646 | Blocks: -948672379 | Methods: 45919 | Field Accesses: 0 | Memory Accesses: 0
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 57870969459 | Blocks: 15161972757 | Methods: 90599 | Field Accesses: 0 | Memory Accesses: 0
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 57870969460 | Blocks: 15161972758 | Methods: 90599 | Field Accesses: 0 | Memory Accesses: 0
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 15 | Instructions: 573236 | Blocks: 167410 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 4006778520 | RobotRun BB: 3346294917
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 27750093549 | Blocks: 7353240848 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 0 | RobotRun BB: 0
+[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 573236 | Blocks: 167410 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 4006778520 | RobotRun BB: 3346294917

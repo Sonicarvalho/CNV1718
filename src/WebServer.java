@@ -22,7 +22,7 @@ public class WebServer {
 	private static long previous = 0;
 
 	public static void main(String[] args) throws Exception {
-		HttpServer server = HttpServer.create(new InetSocketAddress(8070), 0);
+		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
 
 		executor = Executors.newFixedThreadPool(10);
 
