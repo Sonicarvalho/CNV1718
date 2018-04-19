@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -5,6 +8,7 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -41,8 +45,10 @@ public class WebServer {
 
 			String query = t.getRequestURI().getQuery();
 
-			String response = "This was the query:" + query 
-					+ "##";
+			String response = "";
+			
+//			String response = "This was the query:" + query 
+//					+ "##";
 
 			String [] parts=null;
 
@@ -60,25 +66,34 @@ public class WebServer {
 			}
 			
 			
-			InstrumentationTool.setValues(Arrays.toString(parts));
+//			InstrumentationTool.setValues(Arrays.toString(parts));
 			
 			parts[6] = "../mazes/"+parts[6];
 			parts[7] = "../mazes/"+parts[7];
 			
 			try {
-				Runtime runtime = Runtime.getRuntime();
-
-				runtime.gc();
-
-				long startTime = System.currentTimeMillis();
+//				Runtime runtime = Runtime.getRuntime();
+//
+//				runtime.gc();
+//
+//				long startTime = System.currentTimeMillis();
 				Main.main(parts);
-				long estimatedTime = System.currentTimeMillis() - startTime;
+//				long estimatedTime = System.currentTimeMillis() - startTime;
+//
+//				long memory = runtime.totalMemory() - runtime.freeMemory();
+//
+//				response = query.replaceAll("&", " ") + " | Time : "+estimatedTime+"ms | Memory : "+(memory/(1024L * 1024L))+"mb";
 
-				long memory = runtime.totalMemory() - runtime.freeMemory();
-
-				response = query.replaceAll("&", " ") + " | Time : "+estimatedTime+"ms | Memory : "+(memory/(1024L * 1024L))+"mb";
-
-				System.out.println(response);
+				File file = new File(parts[7]);
+				
+				BufferedReader reader = new BufferedReader(new FileReader(file));
+				String line;	
+				while ((line = reader.readLine()) != null) {
+					System.out.println(line);
+					response += line + "\n";
+				}
+				
+				System.out.println(query.replaceAll("&", " "));
 
 
 				//				System.out.println("Estimated time to run Maze" + parts[6] + "Start Pos: " + parts[0]+","+ parts[1] +
@@ -90,7 +105,12 @@ public class WebServer {
 				System.out.println("Invalid Input : " + query);
 			}
 
+			
+			Headers headers = t.getResponseHeaders();
+			headers.add("Content-Type", "text/html");
+			
 			t.sendResponseHeaders(200, response.length());
+			
 			OutputStream os = t.getResponseBody();
 			os.write(response.getBytes());
 			os.close();
