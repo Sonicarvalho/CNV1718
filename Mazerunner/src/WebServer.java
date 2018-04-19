@@ -33,10 +33,6 @@ public class WebServer {
 		server.createContext("/test", new MyHandler());
 		server.setExecutor(executor); // creates a default executor
 		server.start();
-
-
-
-
 	}
 
 	static class MyHandler implements HttpHandler {

@@ -54,8 +54,8 @@ public class WebServer {
     	executor = Executors.newFixedThreadPool(10);
     	
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-        server.createContext("", new MyHandler());
-        server.createContext("/test", new TestHandler());
+        server.createContext("/test", new MyHandler());
+        server.createContext("/ping", new TestHandler());
         server.setExecutor(executor); // creates a default executor
         server.start();
     }
@@ -74,7 +74,8 @@ public class WebServer {
                 String domain = instance.getPublicIpAddress();
                 
                 //Construct Url => domain + query
-                url = new URL("http://" + domain + ":8000?" + t.getRequestURI().getQuery());
+                System.out.println("http://" + domain + ":8000/test?" + t.getRequestURI().getQuery());
+                url = new URL("http://" + domain + ":8000/test?" + t.getRequestURI().getQuery());
                 //Open Connection to server
         		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         		//Send request to server and convert to string- Blocking Function
@@ -99,7 +100,7 @@ public class WebServer {
     static class TestHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-        	String response = "I'm Alive";
+        	String response = "Pong";
 
             //Sets response as OK(200 http code)
             t.sendResponseHeaders(200, response.length());
@@ -107,6 +108,8 @@ public class WebServer {
             OutputStream os = t.getResponseBody();
             //Writes the response in the output body
             os.write(response.getBytes());
+            //Close connection with Client
+            os.close();
     	}
     	
     }
@@ -142,7 +145,7 @@ public class WebServer {
         }
         
         for (Instance instance : instances ) {
-        	if(instance.getImageId().equals("ami-f9d67a84")) {
+        	if(instance.getInstanceId().equals("i-02d6b3fd467a52fbc")) {
         		return instance;
         	}
         }
