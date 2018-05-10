@@ -62,7 +62,7 @@ public class WebServer {
 			}
 			
 			
-//			InstrumentationTool.setValues(Arrays.toString(parts));
+			InstrumentationTool.setValues(Arrays.toString(parts));
 			
 			parts[6] = "../mazes/"+parts[6];
 			parts[7] = "../mazes/"+parts[7];

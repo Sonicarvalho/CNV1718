@@ -32,13 +32,15 @@ public class InstrumentationTool {
 			this.memacc_count = memacc_count;
 			this.bbRobserve = 0;
 			this.bbRrun = 0;
-			
+
 			for(String it : BIT.highBIT.InstructionTable.InstructionTypeName) {
-				instrucTypes.put(it, new Long(0));
+				if (it.equals("CLASS_INSTRUCTION")||it.equals("INSTRUCTIONCHECK_INSTRUCTION") ) {
+					instrucTypes.put(it, new Long(0));
+				}
 			}
-			
-			
-			
+
+
+
 		}
 	}
 
@@ -61,28 +63,20 @@ public class InstrumentationTool {
 				for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
 					Routine routine = (Routine) e.nextElement();
 					routine.addBefore("InstrumentationTool", "mcount", new Integer(1));
-					
-					if(false && ci.getClassName().equals("pt/ulisboa/tecnico/meic/cnv/mazerunner/maze/RobotController")){	
-						if(routine.getMethodName().equals("observe"))
-							for(Enumeration blocks = routine.getBasicBlocks().elements(); blocks.hasMoreElements(); ) {
-								basicBlock = (BasicBlock) blocks.nextElement();
-								basicBlock.addBefore("InstrumentationTool", "bbRobserve", new Integer(basicBlock.size()));
-							}
-						
-						if(routine.getMethodName().equals("run"))
-							for(Enumeration blocks = routine.getBasicBlocks().elements(); blocks.hasMoreElements(); ) {
-									basicBlock = (BasicBlock) blocks.nextElement();
-									basicBlock.addBefore("InstrumentationTool", "bbRrun", new Integer(basicBlock.size()));
-								}
-					}else{
-						for(Enumeration instr = routine.getInstructionArray().elements(); instr.hasMoreElements(); ) {
-								instruc = (Instruction) instr.nextElement();
-								int opcode = instruc.getOpcode();
-								short instr_type = InstructionTable.InstructionTypeTable[opcode];
-								
-								instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
-							}
+
+					for(Enumeration instr = routine.getInstructionArray().elements(); instr.hasMoreElements(); ) {
+						instruc = (Instruction) instr.nextElement();
+						int opcode = instruc.getOpcode();
+						short instr_type = InstructionTable.InstructionTypeTable[opcode];
+
+						if(InstructionTable.InstructionTypeName[instr_type].equals("CLASS_INSTRUCTION")) {
+							instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
+						}else if(InstructionTable.InstructionTypeName[instr_type].equals("INSTRUCTIONCHECK_INSTRUCTION")) {
+							instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
+						}
+
 					}
+
 				}
 
 
@@ -109,14 +103,15 @@ public class InstrumentationTool {
 			long bbRobserve = stuff.bbRobserve;
 			long bbRrun = stuff.bbRrun;
 			HashMap<String,Long> m = stuff.instrucTypes;
-			String aux = Parameters + "Thread: " + (threadId) + " | Instructions: " + (in_count) + 
+			String aux = Parameters + "Thread: " + (threadId) /*+ " | Instructions: " + (in_count) + 
 					" | Blocks: " +(bb_count) + " | Methods: " + (me_count) + " | Field Accesses: "+ (fieldacc_count) +
-					" | Memory Accesses: " + (memacc_count) + " | RobotObserve BB: " + (bbRobserve) + " | RobotRun BB: " + (bbRrun);
+					" | Memory Accesses: " + (memacc_count) + " | RobotObserve BB: " + (bbRobserve) + " | RobotRun BB: " + (bbRrun)*/;
 			loggerAux.add(aux);
 			aux = "";
 			for (Map.Entry<String, Long> e: m.entrySet()) {
 				aux += e.getKey() + ": " +  Long.toString(e.getValue()) + " |\t";
 			}
+			metricsPerThread.clear();
 			loggerAux.add(aux);
 		}
 		try {
@@ -173,7 +168,7 @@ public class InstrumentationTool {
 		metric.fieldacc_count++;
 		metricsPerThread.put(threadId, metric);
 	}
-	
+
 	public static synchronized void bbRobserve(int incr) {
 		long threadId = Thread.currentThread().getId();
 		Metrics metric = metricsPerThread.get(threadId);
@@ -186,14 +181,14 @@ public class InstrumentationTool {
 		metric.bbRrun++;
 		metricsPerThread.put(threadId, metric);
 	}
-	
+
 	public static synchronized void stInstTypes(String iType) {
 		long threadId = Thread.currentThread().getId();
-		
+
 		if(!metricsPerThread.containsKey(threadId))
 			return;
-		
-		
+
+
 		Metrics metric = metricsPerThread.get(threadId);
 		long num = -1;
 		if(metric.instrucTypes.get(iType) != null) {

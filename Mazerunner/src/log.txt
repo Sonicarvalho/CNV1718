@@ -1,57 +1,12 @@
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 12 | Instructions: 1980289801 | Blocks: -1236693731 | Methods: 44681
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 12 | Instructions: 47 | Blocks: 20 | Methods: 1
-Thread: 15 | Instructions: 2072301554 | Blocks: 584930757 | Methods: 89361
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 12 | Instructions: 47 | Blocks: 20 | Methods: 1
-Thread: 15 | Instructions: 2072301555 | Blocks: 584930758 | Methods: 89361
-Thread: 1 | Instructions: 26 | Blocks: 10 | Methods: 2
-Thread: 12 | Instructions: 1980289773 | Blocks: -1236693744 | Methods: 44680
-Thread: 12 | Instructions: 1980289773 | Blocks: -1236693744 | Methods: 44680
-Thread: 13 | Instructions: 1980289773 | Blocks: -1236693744 | Methods: 44680
-Thread: 12 | Instructions: 1980289773 | Blocks: -1236693744 | Methods: 44680
-Thread: 12 | Methods: 44680
-Thread: 12 | Methods: 44680
-Thread: 12 | Methods: 44680
-Thread: 12 | Methods: 44680 | Parameters : null
-Thread: 12 | Methods: 44680
-Thread: 12 | Methods: 44680
-Thread: 12 | Methods: 44680
-Thread: 20 | Methods: 44679
-Thread: 17 | Methods: 10003
-Thread: 12 | Methods: 44680
-Thread: 20 | Methods: 44679
-Thread: 13 | Methods: 44699
-Thread: 17 | Methods: 10003
-Thread: 12 | Methods: 44680
-Thread: 20 | Methods: 44679
-Thread: 13 | Methods: 44699
-Thread: 17 | Methods: 10003
-Thread: 14 | Methods: 44679
-Thread: 12 | Methods: 44680
-Thread: 20 | Methods: 44679
-Thread: 13 | Methods: 44699
-Thread: 17 | Methods: 10003
-Thread: 15 | Methods: 43353
-Thread: 14 | Methods: 44679
-Thread: 12 | Methods: 44680
-Thread: 20 | Methods: 44679
-Thread: 13 | Methods: 44699
-Thread: 18 | Methods: 44679
-Thread: 17 | Methods: 10003
-Thread: 15 | Methods: 43353
-Thread: 14 | Methods: 44679
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Methods: 44680
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 14 | Methods: 44680
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 15 | Methods: 44679
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 14 | Methods: 44680
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Methods: 45919
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: -781243646 | Blocks: -948672379 | Methods: 45919 | Field Accesses: 0 | Memory Accesses: 0
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 57870969459 | Blocks: 15161972757 | Methods: 90599 | Field Accesses: 0 | Memory Accesses: 0
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 57870969460 | Blocks: 15161972758 | Methods: 90599 | Field Accesses: 0 | Memory Accesses: 0
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 15 | Instructions: 573236 | Blocks: 167410 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 4006778520 | RobotRun BB: 3346294917
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 27750093549 | Blocks: 7353240848 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 0 | RobotRun BB: 0
-[3, 9, 78, 89, 50, astar, Maze100.maze, Maze100.html]Thread: 12 | Instructions: 573236 | Blocks: 167410 | Methods: 44680 | Field Accesses: 0 | Memory Accesses: 0 | RobotObserve BB: 4006778520 | RobotRun BB: 3346294917
+[3, 9, 3, 13, 50, astar, Maze100.maze, Maze100.html]Thread: 12
+CLASS_INSTRUCTION: 82 |	INSTRUCTIONCHECK_INSTRUCTION: 432 |	
+[3, 9, 3, 15, 50, astar, Maze100.maze, Maze100.html]Thread: 12
+CLASS_INSTRUCTION: 0 |	INSTRUCTIONCHECK_INSTRUCTION: 2 |	
+[3, 9, 3, 15, 50, astar, Maze100.maze, Maze100.html]Thread: 14
+CLASS_INSTRUCTION: 790 |	INSTRUCTIONCHECK_INSTRUCTION: 4382 |	
+[3, 5, 3, 15, 50, astar, Maze100.maze, Maze100.html]Thread: 17
+CLASS_INSTRUCTION: 778 |	INSTRUCTIONCHECK_INSTRUCTION: 4382 |	
+[3, 9, 3, 11, 50, astar, Maze100.maze, Maze100.html]Thread: 19
+CLASS_INSTRUCTION: 28 |	INSTRUCTIONCHECK_INSTRUCTION: 152 |	
+[3, 9, 3, 13, 50, astar, Maze100.maze, Maze100.html]Thread: 21
+CLASS_INSTRUCTION: 76 |	INSTRUCTIONCHECK_INSTRUCTION: 432 |	
