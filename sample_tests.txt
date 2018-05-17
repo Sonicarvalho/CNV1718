@@ -1,0 +1,22 @@
+ 
+4. Examples of different complexity to test your MazeRunner:
+
+CUIDADO COM AS VELOCITIES. OS NOSSOS DADOS ESTATÍSTICOS FORAM FEITOS COM VELOCITIES DE 50. 
+
+XS	- http://LB-DNS/mzrun.html?m=Maze50.maze&x0=1&y0=1&x1=6&y1=6&v=75&s=bfs
+http://localhost:8000/test?1&1&6&6&75&bfs&Maze50.maze&Maze50.html
+
+S	- http://LB-DNS/mzrun.html?m=Maze100.maze&x0=1&y0=1&x1=74&y1=95&v=40&s=bfs
+http://localhost:8000/test?1&1&74&95&40&bfs&Maze100.maze&Maze100.html
+
+M	- http://LB-DNS/mzrun.html?m=Maze250.maze&x0=124&y0=125&x1=199&y1=201&v=75&s=bfs
+http://localhost:8000/test?124&125&199&201&75&bfs&Maze250.maze&Maze250.html
+
+L	- http://LB-DNS/mzrun.html?m=Maze500.maze&x0=249&y0=250&x1=455&y1=488&v=57&s=astar
+http://localhost:8000/test?249&250&455&488&57&astar&Maze500.maze&Maze500.html
+
+XL	- http://LB-DNS/mzrun.html?m=Maze500.maze&x0=249&y0=250&x1=349&y1=348&v=100&s=dfs
+http://localhost:8000/test?249&250&349&348&100&dfs&Maze500.maze&Maze500.html
+
+XXL 	- http://LB-DNS/mzrun.html?m=Maze1000.maze&x0=2&y0=2&x1=700&y1=600&v=100&s=dfs
+http://localhost:8000/test?2&20&700&600&100&dfs&Maze1000.maze&Maze1000.html
