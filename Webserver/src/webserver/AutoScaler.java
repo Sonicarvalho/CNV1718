@@ -8,7 +8,7 @@ import webserver.models.Server;
 
 public class AutoScaler extends Thread {
 
-	private static String ami = "";
+	private static String ami = LoadBalancer.ImageId;
 	private static String keyName = "";
 	private static String securityGroup = "";
 	

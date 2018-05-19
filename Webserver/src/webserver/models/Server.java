@@ -29,6 +29,10 @@ public class Server {
 		this.InstanceId = instanceId;
 	}
 	
+	public String getInstanceId() {
+		return InstanceId;
+	}
+	
 	public String getIp() {
 		return Ip;
 	}
@@ -68,7 +72,7 @@ public class Server {
 	
 	
 	public boolean resolve(AmazonEC2 ec2) {
-		if(this.Ip != null) {
+		if(this.resolved) {
 			return true;
 		}
 		
@@ -101,6 +105,7 @@ public class Server {
         		
         		// Try to ping machine
         		if(this.ping()) {
+        			this.resolved = true;
         			return true;
         		}
     			System.out.println("Couldn't succesfully ping this AWS Machine!");

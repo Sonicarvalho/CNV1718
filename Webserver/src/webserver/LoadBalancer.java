@@ -50,6 +50,7 @@ public class LoadBalancer {
      *      the credentials file in your source directory.
      */
 
+	static String ImageId = "";
 	static ArrayList<Server> servers = new ArrayList<>();
     static AmazonEC2 ec2;
 	
@@ -134,7 +135,14 @@ public class LoadBalancer {
     static class TestHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-        	String response = "Pong";
+        	Boolean health = false; 
+        	
+        	for(Server server: servers){
+        		if(server.ping())
+        			health = true;
+        	}
+        	
+        	String response = health ? "Available" : "Unavailable";
 
             //Sets response as OK(200 http code)
             t.sendResponseHeaders(200, response.length());
@@ -170,25 +178,62 @@ public class LoadBalancer {
     
     private static String ChooseServer() 
     {
-    	DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
-        List<Reservation> reservations = describeInstancesRequest.getReservations();
-        Set<Instance> instances = new HashSet<Instance>();
+    	ArrayList<String> unavailableServers = new ArrayList<>();
+    	
+    	for(int i = 0; i < servers.size(); i++) {
+    		//TODO Choose server to run the query
 
-        for (Reservation reservation : reservations) {
-            instances.addAll(reservation.getInstances());
-        }
+    		
+    		
+    		// If this instance is not categorized as unavailable
+        	String instanceId = unavailableServers.contains("")? "": "";
+        	
+        	// Get the server
+        	for(Server server: servers) {
+        		if(instanceId.equals(server.getInstanceId())) {
+        			
+        			if(server.isResolved()) {
+            			// If already resolved ping
+        				if(server.ping()) {
+                			// Return the server Ip address
+                			return server.getIp();
+        				}
+        			}
+        			else {
+            			// Else Resolve
+        				if(server.resolve(ec2)) {
+                			// Return the server Ip address
+                			return server.getIp();	
+        				}
+        			}
+        			
+        			// When every check fails add to unavailable
+        			unavailableServers.add(instanceId);
+        		}
+        	}	
+    	}
+    	
+    	
+    	
+//    	  DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
+//        List<Reservation> reservations = describeInstancesRequest.getReservations();
+//        Set<Instance> instances = new HashSet<Instance>();
+//
+//        for (Reservation reservation : reservations) {
+//            instances.addAll(reservation.getInstances());
+//        }
+//        
+//        for (Instance instance : instances ) {
+//        	// TODO insert image of mazerunner servers
+//        	if(instance.getImageId().equals(ImageId)) {
+//        		//Choose instance to redirect the request
+//
+//            	//Get public Ip of the choosen AWS Instance
+//        		return instance.getPublicIpAddress();
+//        	}
+//        }
         
-        for (Instance instance : instances ) {
-        	// TODO insert image of mazerunner servers
-        	if(instance.getImageId().equals("")) {
-        		//Choose instance to redirect the request
-        		
-
-            	//Get public Ip of the choosen AWS Instance
-        		return instance.getPublicIpAddress();
-        	}
-        }
-        
+        System.out.println("A Instance should have been choosen!");
         return null;
     }
 }
