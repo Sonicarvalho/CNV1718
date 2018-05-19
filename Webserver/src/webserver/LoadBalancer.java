@@ -1,3 +1,5 @@
+package webserver;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -6,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +29,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import webserver.models.Server;
+
 
 
 public class LoadBalancer {
@@ -45,11 +50,17 @@ public class LoadBalancer {
      *      the credentials file in your source directory.
      */
 
-    static AmazonEC2      ec2;
+	static ArrayList<Server> servers = new ArrayList<>();
+    static AmazonEC2 ec2;
 	
     public static void main(String[] args) throws Exception {
     	//Init AmazonEC2 connection
     	Init();
+    	System.out.println("Amazon EC2 connection initialized!");
+    	
+    	//Init Auto Scaler Thread
+    	AutoScaler autoScaler = new AutoScaler();
+    	autoScaler.start();
     	
     	executor = Executors.newFixedThreadPool(10);
     	
@@ -58,6 +69,8 @@ public class LoadBalancer {
         server.createContext("/ping", new TestHandler());
         server.setExecutor(executor); // creates a default executor
         server.start();
+        
+        System.out.println("Web Server initialized!");
     }
 
     static class MyHandler implements HttpHandler {
@@ -67,11 +80,9 @@ public class LoadBalancer {
         	String response = "";
         	URL url;
         	//TODO Choose Server Needs Update - Final project
-            Instance instance = ChooseServer();
+            String domain = ChooseServer();
             
-            if(instance != null) {
-            	//Get public Ip of the choosen AWS Instance
-                String domain = instance.getPublicIpAddress();
+            if(domain != null) {
                 System.out.println("Domain: " + domain); 
                 //Construct Url => domain + query
                 String query = t.getRequestURI().getQuery();
@@ -157,7 +168,7 @@ public class LoadBalancer {
       ec2 = AmazonEC2ClientBuilder.standard().withRegion("us-east-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
     }
     
-    private static Instance ChooseServer() 
+    private static String ChooseServer() 
     {
     	DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
         List<Reservation> reservations = describeInstancesRequest.getReservations();
@@ -168,12 +179,16 @@ public class LoadBalancer {
         }
         
         for (Instance instance : instances ) {
-        	if(instance.getInstanceId().equals("i-090b8554b02fb3855")) {
-        		return instance;
+        	// TODO insert image of mazerunner servers
+        	if(instance.getImageId().equals("")) {
+        		//Choose instance to redirect the request
+        		
+
+            	//Get public Ip of the choosen AWS Instance
+        		return instance.getPublicIpAddress();
         	}
         }
         
         return null;
     }
-
 }
