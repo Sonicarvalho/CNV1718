@@ -50,7 +50,17 @@ public class LoadBalancer {
      *      the credentials file in your source directory.
      */
 
+	static int XS = 1;
+	static int S = 2;
+	static int M = 4;
+	static int L = 8;
+	static int XL = 12;
+	
+	static long averageInstructions = 0;
+	
 	static String ImageId = "";
+	static int maximumWeight = 20;
+	
 	static ArrayList<Server> servers = new ArrayList<>();
     static AmazonEC2 ec2;
 	
@@ -80,47 +90,60 @@ public class LoadBalancer {
         public void handle(HttpExchange t) throws IOException {
         	String response = "";
         	URL url;
-        	//TODO Choose Server Needs Update - Final project
-            String domain = ChooseServer();
+        	String domain = "";
+        	
+        	// Get Query from URI
+            String query = t.getRequestURI().getQuery();
+            if(query == null){
+            	//Sets response as BAD_REQUEST(400 http code)
+                t.sendResponseHeaders(400, response.length());
+                //Get response body
+                OutputStream os = t.getResponseBody();
+                //Writes the response in the output body
+                os.write(response.getBytes());
+                //Close connection with Client
+                os.close();
+            }
             
-            if(domain != null) {
-                System.out.println("Domain: " + domain); 
-                //Construct Url => domain + query
-                String query = t.getRequestURI().getQuery();
-                System.out.println("Query: " + query);
-                String [] partes = null;
+            //Parse Query
+            System.out.println("Query: " + query);
+            String [] partes = query.split("[&=]");
+            String filename = partes[1];
+            String x0 = partes[3];
+            String y0= partes[5];
+            String x1 = partes[7];
+            String y1 = partes[9];
+            String vel = partes[11];
+            String strat = partes[13];
+            
+        	// Decide weight for the query
+        	int weight = DecideWeight(Integer.parseInt(x0),Integer.parseInt(y0),Integer.parseInt(x1),Integer.parseInt(y1),Integer.parseInt(vel),strat,filename);
+            
+        	// Get choose server to execute the query
+            Server server = ChooseServer(weight);
+            
+            if(server != null) {
+            	//Construct Url => domain + query
+            	String finalQuery = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
                 
-		
-
-                if (query != null){
-                    partes = query.split("[&=]");
-                    String filename = partes[1];
-                    String x0 = partes[3];
-                    String y0= partes[5];
-                    String x1 = partes[7];
-                    String y1 = partes[9];
-                    String vel = partes[11];
-                    String strat = (partes[13]);
-                    
-                    query = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
-                    
-                    System.out.println("http://" + domain + ":8000/test?" + query);
-                    url = new URL("http://" + domain + ":8000/test?" + query);
-                    //Open Connection to server
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    //Send request to server and convert to string- Blocking Function
-                    response = IOUtils.toString(connection.getInputStream());
-                    
-                }
+                System.out.println("Requesting:\nhttp://" + domain + ":8000/test?" + finalQuery);
+                server.addWeight(weight);
+                url = new URL("http://" + domain + ":8000/test?" + finalQuery);
+                //Open Connection to server
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                //Send request to server and convert to string- Blocking Function
+                response = IOUtils.toString(connection.getInputStream());
+                server.subtractWeight(weight);
                 
-                
-                
+                //Sets response as OK(200 http code)
+                t.sendResponseHeaders(200, response.length());
             }
             else {
             	response = "Couldn't find an AWS Instance";
+
+                //Sets response as BAD REQUEST(400 http code)
+                t.sendResponseHeaders(400, response.length());
             }
-            //Sets response as OK(200 http code)
-            t.sendResponseHeaders(200, response.length());
             //Get response body
             OutputStream os = t.getResponseBody();
             //Writes the response in the output body
@@ -135,15 +158,26 @@ public class LoadBalancer {
     static class TestHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-        	Boolean health = false; 
+        	Boolean alive = false;
+        	int totalPingable = 0;
+        	int totalWeight = 0;
         	
+        	//Theres any Server available to request
         	for(Server server: servers){
-        		if(server.ping())
-        			health = true;
+        		if(server.ping()) {
+        			totalPingable++;
+        			totalWeight += server.getWeight();
+        			alive = true;
+        		}
+        	}
+        	String response;
+        	if(alive) {
+        		response = ((totalWeight/totalPingable) < maximumWeight*0.8)? "Available" : "Overloaded";
+        	}
+        	else {
+        		response = "Unavailable";
         	}
         	
-        	String response = health ? "Available" : "Unavailable";
-
             //Sets response as OK(200 http code)
             t.sendResponseHeaders(200, response.length());
             //Get response body
@@ -176,44 +210,36 @@ public class LoadBalancer {
       ec2 = AmazonEC2ClientBuilder.standard().withRegion("us-east-1").withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
     }
     
-    private static String ChooseServer() 
-    {
-    	ArrayList<String> unavailableServers = new ArrayList<>();
+    // In -> Weight to be added
+    // Out -> Server
+    private static Server ChooseServer(int weight) 
+    {   
+    	Server best = null;
     	
-    	for(int i = 0; i < servers.size(); i++) {
-    		//TODO Choose server to run the query
-
-    		
-    		
-    		// If this instance is not categorized as unavailable
-        	String instanceId = unavailableServers.contains("")? "": "";
-        	
-        	// Get the server
-        	for(Server server: servers) {
-        		if(instanceId.equals(server.getInstanceId())) {
-        			
-        			if(server.isResolved()) {
-            			// If already resolved ping
-        				if(server.ping()) {
-                			// Return the server Ip address
-                			return server.getIp();
-        				}
-        			}
-        			else {
-            			// Else Resolve
-        				if(server.resolve(ec2)) {
-                			// Return the server Ip address
-                			return server.getIp();	
-        				}
-        			}
-        			
-        			// When every check fails add to unavailable
-        			unavailableServers.add(instanceId);
-        		}
-        	}	
-    	}
-    	
-    	
+    	//Choose server to run the query
+    	for(Server server: servers) {
+    		if(!server.toBeTerminated()) {
+	    		// If server is well known
+	    		if(server.isResolved()) {
+	    			// If already resolved ping
+					if(server.ping()) {
+						// If server can handle more weight
+						if((weight + server.getWeight()) <= maximumWeight) {
+							if((best == null) || best.getWeight() > server.getWeight()) {
+								best = server;
+							}
+						}
+					}
+				}
+				else {
+	    			// Else Resolve and assume this is the best server to execute
+					if(server.resolve(ec2)) {
+	        			best = server;
+	        			break;
+					}
+				}
+    		}
+    	}	
     	
 //    	  DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
 //        List<Reservation> reservations = describeInstancesRequest.getReservations();
@@ -232,8 +258,60 @@ public class LoadBalancer {
 //        		return instance.getPublicIpAddress();
 //        	}
 //        }
-        
-        System.out.println("A Instance should have been choosen!");
-        return null;
+    	
+    	// Return the server
+    	return best;
+    }
+    
+    private static int DecideWeight(int xStart, int yStart, int xEnd, int yEnd, int velocity, String strategy, String filename) {
+    	// Default weight
+    	int weight = 0;
+    	
+    	// If there's a valid average instruction
+    	if(true) {
+	    	// Compute distance between points
+	    	double distance = Math.sqrt(Math.pow(xStart - xEnd, 2) + Math.pow(yStart - yEnd, 2));
+	    	// Get maze maximum possible distance 
+	    	int size = Integer.parseInt(filename.split("\\d+")[0]);
+	    	double diagonal = Math.sqrt(2*Math.pow(size, 2));
+	    	// Compute distance ratio
+	    	double distanceRatio = distance/diagonal;
+	    	
+	    	// Compute velocity ratio
+	    	double velocityRatio = (1 - (velocity/100));
+	    	
+	    	// Get Multiplier
+	    	double multiplier = distanceRatio + velocityRatio;
+	    	// Estimate number of instructions
+	    	long estimation = (long)(averageInstructions/2 * multiplier);
+    	
+    	
+	    	// Categorize the request
+	    	if(estimation <= averageInstructions * (1/5)) {
+	    		//XS Category
+	    		weight = XS;
+	    	}
+	    	else if((estimation > averageInstructions * (1/5)) && (estimation <= averageInstructions * (2/5))) {
+	    		//S Category
+	    		weight = S;
+	    	}
+	    	else if((estimation > averageInstructions * (2/5)) && (estimation <= averageInstructions * (3/5))) {
+	    		//M Category
+	    		weight = M;
+	    	}
+	    	else if((estimation > averageInstructions * (3/5)) && (estimation <= averageInstructions * (4/5))) {
+	    		//L Category
+	    		weight = L;
+	    	}
+	    	else if((estimation > averageInstructions * (4/5))) {
+	    		//XL Category
+	    		weight = XL;
+	    	}
+    	}
+    	else {
+    		weight = (2/3) * maximumWeight;
+    	}
+    	
+    	return weight;
     }
 }

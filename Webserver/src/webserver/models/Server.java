@@ -24,9 +24,16 @@ public class Server {
 	private InstanceState state;
 	// Instance Resolve State;
 	private boolean resolved;
+	// Instance weight
+	private int weight;
+	
+	// Deletion Flag;
+	private boolean toDelete;
 	
 	public Server(String instanceId) {
 		this.InstanceId = instanceId;
+		this.resolved = false;
+		this.toDelete = false;
 	}
 	
 	public String getInstanceId() {
@@ -44,6 +51,28 @@ public class Server {
 	public boolean isResolved() {
 		return resolved;
 	}
+	
+	public boolean toBeTerminated() {
+		return toDelete;
+	}
+	
+	public void terminate() {
+		toDelete = true;
+	}
+	
+	
+	public int getWeight() {
+		return weight;
+	}
+	
+	public void addWeight(int weight) {
+		this.weight += weight;
+	}
+	
+	public void subtractWeight(int weight) {
+		this.weight -= weight;
+	}
+	
 	
 	public boolean ping() {
     	String response = "";
