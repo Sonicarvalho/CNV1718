@@ -31,6 +31,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import webserver.models.Server;
+import webserver.utils.ServerManagementUtil;
 
 
 
@@ -63,18 +64,19 @@ public class LoadBalancer {
 	static String ImageId = "";
 	
 	
-	static CopyOnWriteArrayList<Server> servers = new CopyOnWriteArrayList<>();
-	
+	static ServerManagementUtil serverUtil;
 	static AutoScaler autoScaler;
-	
     static AmazonEC2 ec2;
 	
     public static void main(String[] args) throws Exception {
-    	//Init AmazonEC2 connection
+    	// Init Server Management Util
+    	serverUtil = new ServerManagementUtil();
+    	
+    	// Init AmazonEC2 connection
     	Init();
     	System.out.println("Amazon EC2 connection initialized!");
     	
-    	//Init Auto Scaler Thread
+    	// Init Auto Scaler Thread
     	autoScaler = new AutoScaler();
     	autoScaler.start();
     	
@@ -135,7 +137,11 @@ public class LoadBalancer {
                 	String finalQuery = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
                     
                     System.out.println("Requesting:\nhttp://" + domain + ":8000/test?" + finalQuery);
+                    
+                    // Adds weight to server
                     server.addWeight(weight);
+                    serverUtil.set(server);
+                    
                     url = new URL("http://" + domain + ":8000/test?" + finalQuery);
                     try {
                         //Open Connection to server
@@ -145,10 +151,13 @@ public class LoadBalancer {
                 	}
                 	catch(Exception e) {
                 		// Delete server
-                		servers.remove(server);
+                		serverUtil.remove(server);
                 		continue;
-                	}    
+                	}
+                    
+                    // Subtracts the weight from the server
                     server.subtractWeight(weight);
+                    serverUtil.set(server);
                     
                     //Sets response as OK(200 http code)
                     t.sendResponseHeaders(200, response.length());
@@ -179,7 +188,7 @@ public class LoadBalancer {
         	int totalWeight = 0;
         	
         	//Theres any Server available to request
-        	for(Server server: servers){
+        	for(Server server: serverUtil.getServers()){
         		if(server.ping()) {
         			totalPingable++;
         			totalWeight += server.getWeight();
@@ -233,7 +242,7 @@ public class LoadBalancer {
     	Server best = null;
     	
     	//Choose server to run the query
-    	for(Server server: servers) {
+    	for(Server server: serverUtil.getServers()) {
     		if(!server.toBeTerminated()) {
 	    		// If server is well known
 	    		if(server.isResolved()) {

@@ -38,12 +38,12 @@ public class AutoScaler extends Thread {
 					// Launch Instance
 					this.launchInstance(ami, keyName, securityGroup);
 				}
-				else if((ratio < scaleDown) && (LoadBalancer.servers.size() > minimumServers)) {
+				else if((ratio < scaleDown) && (LoadBalancer.serverUtil.count() > minimumServers)) {
 					// Terminate Instance with less weight
 					Server highest = null;
 					
 					// Get the server with less weight
-					for(Server server : LoadBalancer.servers) {
+					for(Server server : LoadBalancer.serverUtil.getServers()) {
 						if((highest == null) || (server.getWeight() < highest.getWeight())) {
 							highest = server;
 						}
@@ -83,12 +83,12 @@ public class AutoScaler extends Thread {
 		
 		// Get new InstanceId
 		String newInstanceId = runInstancesResult.getReservation().getInstances().get(0).getInstanceId();
-		LoadBalancer.servers.add(new Server(newInstanceId));
+		LoadBalancer.serverUtil.add(new Server(newInstanceId));
 	}
 	
 	private void terminateInstance(String instanceId) {
 		// Delete Server from list
-        for(Server server: LoadBalancer.servers) {
+        for(Server server: LoadBalancer.serverUtil.getServers()) {
         	if(server.getInstanceId().equals(instanceId)) {
         		// Change Deletion Flag
     			server.terminate();
@@ -109,7 +109,7 @@ public class AutoScaler extends Thread {
     			}
     			
 				// Remove instance from server list
-            	LoadBalancer.servers.remove(server);
+            	LoadBalancer.serverUtil.remove(server);
             	break;
         	}
         }
@@ -126,7 +126,7 @@ public class AutoScaler extends Thread {
 		// Sum the weights of the servers
 		int sum = 0;
 		int active = 0;
-		for(Server server: LoadBalancer.servers) {
+		for(Server server: LoadBalancer.serverUtil.getServers()) {
 			sum += server.getWeight();
 			active += !server.toBeTerminated() ? 1 : 0;
 		}
