@@ -32,13 +32,13 @@ public class Server {
 	private int weight;
 	
 	// Deletion Flag;
-	private boolean toDelete;
+	private boolean terminate;
 	
 	public Server(String instanceId) {
 		this.InstanceId = instanceId;
 		this.resolved = false;
 		this.tried = false;
-		this.toDelete = false;
+		this.terminate = false;
 	}
 	
 	public String getInstanceId() {
@@ -62,13 +62,16 @@ public class Server {
 	}
 	
 	public boolean toBeTerminated() {
-		return toDelete;
+		return terminate;
 	}
 	
 	public void terminate() {
-		toDelete = true;
+		terminate = true;
 	}
-	
+
+	public void activate() {
+		terminate = false;
+	}
 	
 	public int getWeight() {
 		return weight;

@@ -32,6 +32,7 @@ public class AutoScaler extends Thread {
 				Thread.sleep(60000);
 				
 				double ratio = weightRatio();
+				System.out.println("System Overload : " + ratio);
 				
 				if(ratio > scaleUp) {
 					// Launch Instance
@@ -102,7 +103,8 @@ public class AutoScaler extends Thread {
     			}
     			
     			//If the Scale Down is still needed
-    			if(weightRatio() >= scaleDown) {
+    			if(weightRatio() > scaleUp) {
+    				server.activate();
         			return;
     			}
     			
@@ -123,12 +125,14 @@ public class AutoScaler extends Thread {
 	private double weightRatio() {
 		// Sum the weights of the servers
 		int sum = 0;
+		int active = 0;
 		for(Server server: LoadBalancer.servers) {
 			sum += server.getWeight();
+			active += !server.toBeTerminated() ? 1 : 0;
 		}
 		
 		// Get the Average of the weight
-		double averageWeight = sum/(LoadBalancer.servers.size());
+		double averageWeight = sum/active;
 		
 		// Get the weight ratio
 		return averageWeight/LoadBalancer.maximumWeight;
