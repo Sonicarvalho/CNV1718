@@ -12,6 +12,9 @@ public class AutoScaler extends Thread {
 	private static String keyName = "";
 	private static String securityGroup = "";
 
+	
+	private static int minimumServers = 2;
+	
 	//TODO change this percentage
 	private static double scaleUp = 0.8;
 	private static double scaleDown = 0.2;
@@ -34,13 +37,13 @@ public class AutoScaler extends Thread {
 					// Launch Instance
 					this.launchInstance(ami, keyName, securityGroup);
 				}
-				else if(ratio < scaleDown) {
-					// Terminate Instance with most weight
+				else if((ratio < scaleDown) && (LoadBalancer.servers.size() > minimumServers)) {
+					// Terminate Instance with less weight
 					Server highest = null;
 					
-					// Get the server with most weight
+					// Get the server with less weight
 					for(Server server : LoadBalancer.servers) {
-						if((highest == null) || (server.getWeight() > highest.getWeight())) {
+						if((highest == null) || (server.getWeight() < highest.getWeight())) {
 							highest = server;
 						}
 					}
@@ -132,7 +135,7 @@ public class AutoScaler extends Thread {
 	}
 	
 	private void Init() {
-		this.launchInstance(ami, keyName, securityGroup);
-		this.launchInstance(ami, keyName, securityGroup);
+		for(int i = 0; i < minimumServers; i++)
+			this.launchInstance(ami, keyName, securityGroup);
 	}
 }
