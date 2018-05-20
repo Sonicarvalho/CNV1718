@@ -31,6 +31,7 @@ public class WebServer {
 		executor = Executors.newFixedThreadPool(10);
 
 		server.createContext("/test", new MyHandler());
+		server.createContext("/ping", new TestHandler());
 		server.setExecutor(executor); // creates a default executor
 		server.start();
 	}
@@ -114,5 +115,22 @@ public class WebServer {
 
 		}
 	}
+	
+	static class TestHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+        	String response = "Pong";
+        	
+            //Sets response as OK(200 http code)
+            t.sendResponseHeaders(200, response.length());
+            //Get response body
+            OutputStream os = t.getResponseBody();
+            //Writes the response in the output body
+            os.write(response.getBytes());
+            //Close connection with Client
+            os.close();
+    	}
+    	
+    }
 
 }
