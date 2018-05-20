@@ -157,7 +157,7 @@ public class DynamoDBUtil {
     	// Condition the algorithm
     	Condition algorithmCondition = new Condition()
             .withComparisonOperator(ComparisonOperator.EQ.toString())
-            .withAttributeValueList(new AttributeValue(algorithm));
+            .withAttributeValueList(new AttributeValue(" "+algorithm));
         scanFilter.put("Algorithm", algorithmCondition);
         
 
@@ -171,10 +171,15 @@ public class DynamoDBUtil {
         ScanResult scanResult = dynamoDB.scan(scanRequest);
         System.out.println("Result Count: " + scanResult.getItems().size());
 
+        if(scanResult.getItems().size() == 0)
+        	return -1;
+        
         long sum = 0;
         int count = 0;
         
         for(Map<String, AttributeValue> map : scanResult.getItems()) {
+        	System.out.println("Entry" + count+1 + " : " + map.get("CLASS_INSTRUCTION").getN());
+        	
         	sum += Long.parseLong(map.get("CLASS_INSTRUCTION").getN());
         	count++;
         }
