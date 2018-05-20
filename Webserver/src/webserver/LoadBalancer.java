@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,14 +55,18 @@ public class LoadBalancer {
 	static int S = 2;
 	static int M = 4;
 	static int L = 8;
-	static int XL = 12;
+	static int XL = 16;
 	
-	static long averageInstructions = 0;
-	
-	static String ImageId = "";
+	static long averageInstructions = -1;
 	static int maximumWeight = 20;
 	
-	static ArrayList<Server> servers = new ArrayList<>();
+	static String ImageId = "";
+	
+	
+	static CopyOnWriteArrayList<Server> servers = new CopyOnWriteArrayList<>();
+	
+	static AutoScaler autoScaler;
+	
     static AmazonEC2 ec2;
 	
     public static void main(String[] args) throws Exception {
@@ -70,7 +75,7 @@ public class LoadBalancer {
     	System.out.println("Amazon EC2 connection initialized!");
     	
     	//Init Auto Scaler Thread
-    	AutoScaler autoScaler = new AutoScaler();
+    	autoScaler = new AutoScaler();
     	autoScaler.start();
     	
     	executor = Executors.newFixedThreadPool(10);
@@ -119,31 +124,42 @@ public class LoadBalancer {
         	// Decide weight for the query
         	int weight = DecideWeight(Integer.parseInt(x0),Integer.parseInt(y0),Integer.parseInt(x1),Integer.parseInt(y1),Integer.parseInt(vel),strat,filename);
             
-        	// Get choose server to execute the query
-            Server server = ChooseServer(weight);
-            
-            if(server != null) {
-            	//Construct Url => domain + query
-            	String finalQuery = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
+        	boolean retry = true;
+        	// While no successfull request retry
+        	while(retry) {
+            	// Get choose server to execute the query
+                Server server = ChooseServer(weight);
                 
-                System.out.println("Requesting:\nhttp://" + domain + ":8000/test?" + finalQuery);
-                server.addWeight(weight);
-                url = new URL("http://" + domain + ":8000/test?" + finalQuery);
-                //Open Connection to server
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                //Send request to server and convert to string- Blocking Function
-                response = IOUtils.toString(connection.getInputStream());
-                server.subtractWeight(weight);
-                
-                //Sets response as OK(200 http code)
-                t.sendResponseHeaders(200, response.length());
-            }
-            else {
-            	response = "Couldn't find an AWS Instance";
-
-                //Sets response as BAD REQUEST(400 http code)
-                t.sendResponseHeaders(400, response.length());
-            }
+                if(server != null) {
+                	//Construct Url => domain + query
+                	String finalQuery = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
+                    
+                    System.out.println("Requesting:\nhttp://" + domain + ":8000/test?" + finalQuery);
+                    server.addWeight(weight);
+                    url = new URL("http://" + domain + ":8000/test?" + finalQuery);
+                    try {
+                        //Open Connection to server
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        //Send request to server and convert to string- Blocking Function
+                        response = IOUtils.toString(connection.getInputStream());
+                	}
+                	catch(Exception e) {
+                		// Delete server
+                		servers.remove(server);
+                		continue;
+                	}    
+                    server.subtractWeight(weight);
+                    
+                    //Sets response as OK(200 http code)
+                    t.sendResponseHeaders(200, response.length());
+                    
+                    retry = false;	
+                	
+                }
+                else {
+                	response = "Couldn't find an AWS Instance\nRetrying...";
+                }
+        	}
             //Get response body
             OutputStream os = t.getResponseBody();
             //Writes the response in the output body
@@ -233,31 +249,18 @@ public class LoadBalancer {
 				}
 				else {
 	    			// Else Resolve and assume this is the best server to execute
-					if(server.resolve(ec2)) {
+					if(!server.hasTried() && server.resolve(ec2)) {
 	        			best = server;
 	        			break;
 					}
 				}
     		}
-    	}	
+    	}
     	
-//    	  DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
-//        List<Reservation> reservations = describeInstancesRequest.getReservations();
-//        Set<Instance> instances = new HashSet<Instance>();
-//
-//        for (Reservation reservation : reservations) {
-//            instances.addAll(reservation.getInstances());
-//        }
-//        
-//        for (Instance instance : instances ) {
-//        	// TODO insert image of mazerunner servers
-//        	if(instance.getImageId().equals(ImageId)) {
-//        		//Choose instance to redirect the request
-//
-//            	//Get public Ip of the choosen AWS Instance
-//        		return instance.getPublicIpAddress();
-//        	}
-//        }
+    	if(best == null) {
+    		autoScaler.pressureLaunchInstance();
+    		best = ChooseServer(weight);
+    	}
     	
     	// Return the server
     	return best;
@@ -268,7 +271,7 @@ public class LoadBalancer {
     	int weight = 0;
     	
     	// If there's a valid average instruction
-    	if(true) {
+    	if(averageInstructions > 0) {
 	    	// Compute distance between points
 	    	double distance = Math.sqrt(Math.pow(xStart - xEnd, 2) + Math.pow(yStart - yEnd, 2));
 	    	// Get maze maximum possible distance 
@@ -309,7 +312,7 @@ public class LoadBalancer {
 	    	}
     	}
     	else {
-    		weight = (2/3) * maximumWeight;
+    		weight = (int)((2/3) * maximumWeight);
     	}
     	
     	return weight;

@@ -22,30 +22,45 @@ public class AutoScaler extends Thread {
 		Init();
 		System.out.println("AutoScaller Initialized!");
 		
-		//Auto Scaler Life Cycle
+		// Auto Scaler Life Cycle
 		while(true){
 			try {
-				//Sleep Auto Scaler for 1 minute
-				this.sleep(60000);
+				// Sleep Auto Scaler for 1 minute
+				Thread.sleep(60000);
 				
-				//TODO Your code should go here!
-				int sum = 0;
-				for(Server server: LoadBalancer.servers) {
-					sum += server.getWeight();
+				double ratio = weightRatio();
+				
+				if(ratio > scaleUp) {
+					// Launch Instance
+					this.launchInstance(ami, keyName, securityGroup);
 				}
-				
-				double averageWeight = sum/(LoadBalancer.servers.size());
-				double average = averageWeight/LoadBalancer.maximumWeight;
-				
-				if(average > scaleUp) {
-					//Launch Instance
-				}
-				else if(average < scaleDown) {
-					//Terminate Instance with most weight
+				else if(ratio < scaleDown) {
+					// Terminate Instance with most weight
+					Server highest = null;
+					
+					// Get the server with most weight
+					for(Server server : LoadBalancer.servers) {
+						if((highest == null) || (server.getWeight() > highest.getWeight())) {
+							highest = server;
+						}
+					}
+					
+					// Terminate the Instance
+					this.terminateInstance(highest.getInstanceId());
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	public void pressureLaunchInstance() {
+		System.out.println("Launching an Instance to backup the system!");
+		this.launchInstance(ami, keyName, securityGroup);
+		try {
+			Thread.sleep(30000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -83,8 +98,14 @@ public class AutoScaler extends Thread {
 					}
     			}
     			
-    			// Remove instance from server list
-            	LoadBalancer.servers.remove(server);	
+    			//If the Scale Down is still needed
+    			if(weightRatio() >= scaleDown) {
+        			return;
+    			}
+    			
+				// Remove instance from server list
+            	LoadBalancer.servers.remove(server);
+            	break;
         	}
         }
 		
@@ -94,6 +115,20 @@ public class AutoScaler extends Thread {
         LoadBalancer.ec2.terminateInstances(termInstanceReq);
         
         
+	}
+	
+	private double weightRatio() {
+		// Sum the weights of the servers
+		int sum = 0;
+		for(Server server: LoadBalancer.servers) {
+			sum += server.getWeight();
+		}
+		
+		// Get the Average of the weight
+		double averageWeight = sum/(LoadBalancer.servers.size());
+		
+		// Get the weight ratio
+		return averageWeight/LoadBalancer.maximumWeight;
 	}
 	
 	private void Init() {

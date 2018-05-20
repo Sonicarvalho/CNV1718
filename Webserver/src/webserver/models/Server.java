@@ -22,8 +22,12 @@ public class Server {
 	private String Ip;
 	// Instance Status
 	private InstanceState state;
+	
 	// Instance Resolve State;
 	private boolean resolved;
+	// Instance has tried to Resolve State;
+	private boolean tried;
+	
 	// Instance weight
 	private int weight;
 	
@@ -33,6 +37,7 @@ public class Server {
 	public Server(String instanceId) {
 		this.InstanceId = instanceId;
 		this.resolved = false;
+		this.tried = false;
 		this.toDelete = false;
 	}
 	
@@ -50,6 +55,10 @@ public class Server {
 	
 	public boolean isResolved() {
 		return resolved;
+	}
+	
+	public boolean hasTried() {
+		return tried;
 	}
 	
 	public boolean toBeTerminated() {
@@ -101,10 +110,11 @@ public class Server {
 	
 	
 	public boolean resolve(AmazonEC2 ec2) {
-		if(this.resolved) {
-			return true;
+		if(this.tried) {
+			return this.isResolved();
 		}
 		
+		this.tried = true;
 		
 		DescribeInstancesResult describeInstancesRequest = ec2.describeInstances();
         List<Reservation> reservations = describeInstancesRequest.getReservations();
@@ -120,15 +130,18 @@ public class Server {
         		this.state = InstanceState.fromValue(instance.getState().getName());
         		System.out.println("AWS Machine state : " + instance.getState().getName());
         		
+        		// If the machine is not Running
         		if(this.state != InstanceState.RUNNING) {
         			System.out.println("This AWS Machine isn't running!");
+        			this.resolved = false;
         			return false;
         		}
 
             	//Get public Ip of this AWS Instance
         		this.Ip = instance.getPublicIpAddress();
         		
-        		if(this.Ip != null) {
+        		if(this.Ip == null) {
+        			this.resolved = false;
         			return false;
         		}
         		
@@ -138,11 +151,13 @@ public class Server {
         			return true;
         		}
     			System.out.println("Couldn't succesfully ping this AWS Machine!");
+    			this.resolved = false;
     			return false;
         	}
         }
         
         System.out.println("No instance has this identifier ("+ this.InstanceId +")");
+		this.resolved = false;
         return false;
 		
 	}
