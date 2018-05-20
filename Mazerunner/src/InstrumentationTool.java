@@ -9,44 +9,19 @@ import static java.nio.file.StandardOpenOption.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
 
 public class InstrumentationTool {
 	private static ConcurrentHashMap<Long, Metrics> metricsPerThread = new ConcurrentHashMap();
-	private static String Parameters;
+	private static ConcurrentHashMap<Long, String> Parameters = new ConcurrentHashMap();
+	
 
-	static class Metrics {
-		public long i_count;
-		public long b_count;
-		public int m_count;
-		public int fieldacc_count;
-		public int memacc_count;
-		public long bbRobserve;
-		public long bbRrun;
-		public HashMap<String,Long> instrucTypes = new HashMap<String, Long>();
-
-		public Metrics(int i_count, int b_count, int m_count,int facc_count,int memacc_count){
-			this.i_count = i_count;
-			this.b_count = b_count;
-			this.m_count = m_count;
-			this.fieldacc_count = facc_count;
-			this.memacc_count = memacc_count;
-			this.bbRobserve = 0;
-			this.bbRrun = 0;
-
-			for(String it : BIT.highBIT.InstructionTable.InstructionTypeName) {
-				if (it.equals("CLASS_INSTRUCTION")||it.equals("INSTRUCTIONCHECK_INSTRUCTION") ) {
-					instrucTypes.put(it, new Long(0));
-				}
-			}
-
-
-
-		}
-	}
-
-	public static void main(String argv[]) {
+	public static void main(String argv[]) throws Exception {
 		File file_in = new File(argv[0]);
 		String infilenames[] = file_in.list();
+	
 
 
 		BasicBlock basicBlock;
@@ -59,21 +34,31 @@ public class InstrumentationTool {
 				ClassInfo ci = new ClassInfo(argv[0] + System.getProperty("file.separator") + infilename);
 				System.out.println((ci.getClassName()));
 				// loop through all the routines
-				// see java.util.Enumeration for more information on Enumeration class
+
 				for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
 					Routine routine = (Routine) e.nextElement();
-					routine.addBefore("InstrumentationTool", "mcount", new Integer(1));
-
+					//routine.addBefore("InstrumentationTool", "mcount", new Integer(1));
+					
+					/*for(Enumeration blocks = routine.getBasicBlocks().elements(); blocks.hasMoreElements(); ) {
+						basicBlock = (BasicBlock) blocks.nextElement();
+						basicBlock.addBefore("InstrumentationTool", "count", new Integer(basicBlock.size()));
+					}*/
+					
 					for(Enumeration instr = routine.getInstructionArray().elements(); instr.hasMoreElements(); ) {
 						instruc = (Instruction) instr.nextElement();
 						int opcode = instruc.getOpcode();
 						short instr_type = InstructionTable.InstructionTypeTable[opcode];
+						
+						//instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
+
 
 						if(InstructionTable.InstructionTypeName[instr_type].equals("CLASS_INSTRUCTION")) {
 							instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
 						}else if(InstructionTable.InstructionTypeName[instr_type].equals("INSTRUCTIONCHECK_INSTRUCTION")) {
 							instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
-						}
+						}else if(InstructionTable.InstructionTypeName[instr_type].equals("COMPARISON_INSTRUCTION")) {
+							instruc.addBefore("InstrumentationTool", "stInstTypes", new String(InstructionTable.InstructionTypeName[instr_type]));
+						}/**/
 
 					}
 
@@ -88,35 +73,62 @@ public class InstrumentationTool {
 
 	// Outputs the metrics to a log file!
 	// logfile->  Thread: # | Instructions: # | Blocks: # | Methods: #
-	public static synchronized void printInstrumentationTool(String foo) {
+	public static synchronized void printInstrumentationTool(String foo) throws Exception {
 		Charset utf8 = StandardCharsets.UTF_8;
 		List<String> loggerAux = new ArrayList<String>();
 
+		
+		long threadId = Thread.currentThread().getId();
+
 		for(Map.Entry<Long,Metrics> entries : metricsPerThread.entrySet()) {
-			long threadId = entries.getKey();
-			Metrics stuff = entries.getValue();
+			
+			if (threadId != entries.getKey())
+				continue;
+			
+			Metrics stuff = entries.getValue(); 
 			long in_count = stuff.i_count;
 			long bb_count = stuff.b_count;
-			int me_count = stuff.m_count;
-			int fieldacc_count = stuff.fieldacc_count;
-			int memacc_count =  stuff.fieldacc_count;
-			long bbRobserve = stuff.bbRobserve;
-			long bbRrun = stuff.bbRrun;
+			
 			HashMap<String,Long> m = stuff.instrucTypes;
-			String aux = Parameters + "Thread: " + (threadId) /*+ " | Instructions: " + (in_count) + 
-					" | Blocks: " +(bb_count) + " | Methods: " + (me_count) + " | Field Accesses: "+ (fieldacc_count) +
-					" | Memory Accesses: " + (memacc_count) + " | RobotObserve BB: " + (bbRobserve) + " | RobotRun BB: " + (bbRrun)*/;
-			loggerAux.add(aux);
-			aux = "";
+			String aux = Parameters.get(threadId) + "Thread: " + (threadId) + " | Instructions: " + (in_count) + 
+					" | BasicBlocks: " +(bb_count)  + " | " /*Methods: " + (me_count) + " */;
+
+			
+			//loggerAux.add(aux);
+			//aux = "";
+
+			
 			for (Map.Entry<String, Long> e: m.entrySet()) {
 				aux += e.getKey() + ": " +  Long.toString(e.getValue()) + " |\t";
 			}
-			metricsPerThread.clear();
+			
+
+			
+			String params[] = Parameters.get(threadId).substring(1, Parameters.get(threadId).length()-1).split(",");
+			
+			AmazonDynamoDBSample.init();
+			AmazonDynamoDBSample.createMetricsTable();
+			
+			System.out.println("Escrever na BD");
+			Map<String, AttributeValue> item = AmazonDynamoDBSample.newItemMetrics(Integer.parseInt(params[0]), 
+												Integer.parseInt(params[1].trim()), 
+												Integer.parseInt(params[2].trim()),
+												Integer.parseInt(params[3].trim()), 
+												Integer.parseInt(params[4].trim()), 
+												params[5], 
+												Integer.parseInt(params[6].split("\\D+")[1]),
+												m.get("CLASS_INSTRUCTION"),
+												m.get("INSTRUCTIONCHECK_INSTRUCTION"), 
+												m.get("COMPARISON_INSTRUCTION"));
+			AmazonDynamoDBSample.addMetricsItem(item);
+			
+			metricsPerThread.remove(entries.getKey());
 			loggerAux.add(aux);
 		}
+		
 		try {
 			Files.write(Paths.get("log.txt"), loggerAux, utf8, APPEND);
-			loggerAux.clear();
+			
 		} catch (IOException e) {
 			System.out.println("Something went wrong with the logger!!!");
 		}
@@ -162,47 +174,22 @@ public class InstrumentationTool {
 		metricsPerThread.put(threadId, metric);
 	}
 
-	public static synchronized void facount(int incr) {
-		long threadId = Thread.currentThread().getId();
-		Metrics metric = metricsPerThread.get(threadId);
-		metric.fieldacc_count++;
-		metricsPerThread.put(threadId, metric);
-	}
-
-	public static synchronized void bbRobserve(int incr) {
-		long threadId = Thread.currentThread().getId();
-		Metrics metric = metricsPerThread.get(threadId);
-		metric.bbRobserve++;
-		metricsPerThread.put(threadId, metric);
-	}
-	public static synchronized void bbRrun(int incr) {
-		long threadId = Thread.currentThread().getId();
-		Metrics metric = metricsPerThread.get(threadId);
-		metric.bbRrun++;
-		metricsPerThread.put(threadId, metric);
-	}
 
 	public static synchronized void stInstTypes(String iType) {
 		long threadId = Thread.currentThread().getId();
+		Metrics metric;
+		if(!metricsPerThread.containsKey(threadId)) {
+			metric = new Metrics(0,0,0,0,0);
+			metricsPerThread.put(threadId, metric);
+		}
 
-		if(!metricsPerThread.containsKey(threadId))
-			return;
-
-
-		Metrics metric = metricsPerThread.get(threadId);
+		metric = metricsPerThread.get(threadId);
 		long num = -1;
 		if(metric.instrucTypes.get(iType) != null) {
 			num = metric.instrucTypes.get(iType);
 		}
 		metric.instrucTypes.put(iType, num+1);
-		metric.i_count++;
-		metricsPerThread.put(threadId, metric);
-	}
-	// Updates metrics for each threadId (in case of load or store)
-	public static synchronized void macount(int incr) {
-		long threadId = Thread.currentThread().getId();
-		Metrics metric = metricsPerThread.get(threadId);
-		metric.memacc_count++;
+		//metric.i_count++;
 		metricsPerThread.put(threadId, metric);
 	}
 
@@ -213,8 +200,8 @@ public class InstrumentationTool {
 	}
 
 	// Extra function to receive the query parameters and save them as the key on the table
-	public static void setValues(String queryParam) {
-		Parameters = queryParam;
+	public static void setValues(String queryParam, long threadId) {
+		Parameters.put(threadId, queryParam);
 	}
 
 }

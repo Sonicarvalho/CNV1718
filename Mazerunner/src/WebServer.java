@@ -63,7 +63,8 @@ public class WebServer {
 			}
 			
 			
-			InstrumentationTool.setValues(Arrays.toString(parts));
+			long threadId = Thread.currentThread().getId();
+            InstrumentationTool.setValues(Arrays.toString(parts),threadId);
 			
 			parts[6] = "../mazes/"+parts[6];
 			parts[7] = "../mazes/"+parts[7];
@@ -86,11 +87,11 @@ public class WebServer {
 				BufferedReader reader = new BufferedReader(new FileReader(file));
 				String line;	
 				while ((line = reader.readLine()) != null) {
-					System.out.println(line);
+					//System.out.println(line);
 					response += line + "\n";
 				}
 				
-				System.out.println(query.replaceAll("&", " "));
+				//System.out.println(query.replaceAll("&", " "));
 
 
 				//				System.out.println("Estimated time to run Maze" + parts[6] + "Start Pos: " + parts[0]+","+ parts[1] +
