@@ -56,7 +56,7 @@ public class DynamoDBUtil {
      * @see com.amazonaws.auth.ProfilesConfigFile
      * @see com.amazonaws.ClientConfiguration
      */
-    static void init() throws Exception {
+    public static void init() throws Exception {
         /*
          * The ProfileCredentialsProvider will return your [default]
          * credential profile by reading from the credentials file located at

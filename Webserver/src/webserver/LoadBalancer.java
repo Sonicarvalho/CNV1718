@@ -31,6 +31,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import webserver.models.Server;
+import webserver.utils.DynamoDBUtil;
 import webserver.utils.ServerManagementUtil;
 
 
@@ -58,23 +59,28 @@ public class LoadBalancer {
 	static int L = 8;
 	static int XL = 16;
 	
-	static long averageInstructions = -1;
 	static int maximumWeight = 20;
 	
-	static String ImageId = "";
+	static String ImageId = "ami-8727b9f8";
 	
 	
+	static DynamoDBUtil dbUtil;
 	static ServerManagementUtil serverUtil;
 	static AutoScaler autoScaler;
     static AmazonEC2 ec2;
 	
     public static void main(String[] args) throws Exception {
-    	// Init Server Management Util
-    	serverUtil = new ServerManagementUtil();
-    	
     	// Init AmazonEC2 connection
     	Init();
     	System.out.println("Amazon EC2 connection initialized!");
+    	
+    	// Init DynamoDB
+    	dbUtil = new DynamoDBUtil();
+    	dbUtil.init();
+    	
+    	// Init Server Management Util
+    	serverUtil = new ServerManagementUtil();
+    
     	
     	// Init Auto Scaler Thread
     	autoScaler = new AutoScaler();
@@ -149,9 +155,9 @@ public class LoadBalancer {
                         //Send request to server and convert to string- Blocking Function
                         response = IOUtils.toString(connection.getInputStream());
                 	}
-                	catch(Exception e) {
+                	catch(IOException e) {
                 		// Delete server
-                		serverUtil.remove(server);
+                        autoScaler.forceTerminationInstance(server.getInstanceId());
                 		continue;
                 	}
                     
@@ -279,12 +285,17 @@ public class LoadBalancer {
     	// Default weight
     	int weight = 0;
     	
+    	// Parse the maze size
+    	int size = Integer.parseInt(filename.split("\\D+")[1]);
+    	
+    	// Get the average for the strategy and the size
+    	long averageInstructions = dbUtil.getAverage(strategy, size);
+    	
     	// If there's a valid average instruction
     	if(averageInstructions > 0) {
 	    	// Compute distance between points
 	    	double distance = Math.sqrt(Math.pow(xStart - xEnd, 2) + Math.pow(yStart - yEnd, 2));
 	    	// Get maze maximum possible distance 
-	    	int size = Integer.parseInt(filename.split("\\d+")[0]);
 	    	double diagonal = Math.sqrt(2*Math.pow(size, 2));
 	    	// Compute distance ratio
 	    	double distanceRatio = distance/diagonal;
