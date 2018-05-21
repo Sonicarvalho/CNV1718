@@ -1,5 +1,8 @@
 package webserver;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
@@ -7,6 +10,9 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import webserver.models.Server;
 
 public class AutoScaler extends Thread {
+	// Timer for the backup launch
+	private static Timer timer;
+	private static boolean backupAvailable = true;
 
 	private static String ami = LoadBalancer.ImageId;
 	private static String keyName = "CNV-AWS";
@@ -30,9 +36,11 @@ public class AutoScaler extends Thread {
 			try {
 				// Sleep Auto Scaler for 1 minute
 				Thread.sleep(60000);
-
+				
+				// Get the weight ratio
 				double ratio = weightRatio();
-				System.out.println("System Overload : " + ratio);
+				
+				System.out.println("System Overall Weight Ratio: " + ratio*100 + "%");
 
 				if (ratio > scaleUp) {
 					// Launch Instance
@@ -50,6 +58,7 @@ public class AutoScaler extends Thread {
 
 					// Terminate the Instance
 					this.terminateInstance(highest.getInstanceId());
+					System.out.println("Terminated");
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -59,11 +68,9 @@ public class AutoScaler extends Thread {
 
 	public void pressureLaunchInstance() {
 		System.out.println("Launching an Instance to backup the system!");
-		this.launchInstance(ami, keyName, securityGroup);
-		try {
-			Thread.sleep(30000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		if(backupAvailable) {
+			this.launchInstance(ami, keyName, securityGroup);
+			startTimer();
 		}
 	}
 
@@ -114,6 +121,11 @@ public class AutoScaler extends Thread {
 				LoadBalancer.ec2.terminateInstances(termInstanceReq);
 			}
 		}
+		
+		System.out.println("Servers Online after terminating:");
+		for(Server server: LoadBalancer.serverUtil.getServers()){
+			System.out.println(server.getInstanceId());
+		}
 	}
 
 	public void forceTerminationInstance(String instanceId) {
@@ -156,6 +168,10 @@ public class AutoScaler extends Thread {
 			active += !server.toBeTerminated() ? 1 : 0;
 		}
 
+		if(active == 0) {
+			return 0;
+		}
+		
 		// Get the Average of the weight
 		double averageWeight = sum / active;
 
@@ -167,4 +183,20 @@ public class AutoScaler extends Thread {
 		for (int i = 0; i < minimumServers; i++)
 			this.launchInstance(ami, keyName, securityGroup);
 	}
+	
+	private void startTimer() {
+		System.out.println("Waiting until the breach time has ended!");
+        backupAvailable = false;
+        TimerTask timerTask = new TimerTask() {
+
+            @Override
+            public void run() {
+                backupAvailable = true;
+                timer.cancel();
+            }
+        };
+        timer = new Timer();
+        timer.schedule(timerTask, 1000);
+
+    }
 }

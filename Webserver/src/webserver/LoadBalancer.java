@@ -132,16 +132,22 @@ public class LoadBalancer {
         	// Decide weight for the query
         	int weight = DecideWeight(Integer.parseInt(x0),Integer.parseInt(y0),Integer.parseInt(x1),Integer.parseInt(y1),Integer.parseInt(vel),strat,filename);
             
+        	System.out.println("Decided Weight :" + weight);
+        	
+        	
         	boolean retry = true;
         	// While no successfull request retry
         	while(retry) {
             	// Get choose server to execute the query
                 Server server = ChooseServer(weight);
+            	System.out.println("Choosen server Weight :" + server.getWeight());
                 
                 if(server != null) {
                 	//Construct Url => domain + query
                 	String finalQuery = x0 + '&' +y0 + '&' +x1 + '&' +y1 + '&'+vel+ '&' +strat+ "&"+filename + ".maze&" + filename + ".html";
                     
+                	domain = server.getIp();
+                	
                     System.out.println("Requesting:\nhttp://" + domain + ":8000/test?" + finalQuery);
                     
                     // Adds weight to server
@@ -157,6 +163,8 @@ public class LoadBalancer {
                 	}
                 	catch(IOException e) {
                 		// Delete server
+                		System.out.println("Forcing the termination of an instance!");
+                		
                         autoScaler.forceTerminationInstance(server.getInstanceId());
                 		continue;
                 	}
@@ -193,22 +201,27 @@ public class LoadBalancer {
         	int totalPingable = 0;
         	int totalWeight = 0;
         	
+        	System.out.println("Pinging the "+serverUtil.getServers().size()+ "machines...");
+        	
         	//Theres any Server available to request
         	for(Server server: serverUtil.getServers()){
         		if(server.isResolved() && server.ping()){
+        			System.out.println("Pinged!");
         			totalPingable++;
         			totalWeight += server.getWeight();
         			alive = true;
         		}
         		else if(server.resolve(ec2)) {
+        			System.out.println("Resolved!");
         			totalPingable++;
         			totalWeight += server.getWeight();
         			alive = true;
         		}
         	}
         	String response;
+        	System.out.println("Weight Ratio" + (totalWeight/totalPingable));
         	if(alive) {
-        		response = ((totalWeight/totalPingable) < maximumWeight*0.8)? "Available" : "Overloaded";
+        		response = ((totalWeight/totalPingable) <= maximumWeight*0.8)? "Available" : "Overloaded";
         	}
         	else {
         		response = "Unavailable";
@@ -255,10 +268,14 @@ public class LoadBalancer {
     	//Choose server to run the query
     	for(Server server: serverUtil.getServers()) {
     		if(!server.toBeTerminated()) {
+    			System.out.println("Not to be terminated");
 	    		// If server is well known
 	    		if(server.isResolved()) {
+	    			System.out.println("Was already Resolved: " + server.getIp());
+	    			
 	    			// If already resolved ping
 					if(server.ping()) {
+		    			System.out.println("Pinged the server at " + server.getIp());
 						// If server can handle more weight
 						if((weight + server.getWeight()) <= maximumWeight) {
 							if((best == null) || best.getWeight() > server.getWeight()) {
@@ -268,8 +285,10 @@ public class LoadBalancer {
 					}
 				}
 				else {
+					System.out.println("Needs resolving for " + server.getInstanceId());
 	    			// Else Resolve and assume this is the best server to execute
 					if(!server.hasTried() && server.resolve(ec2)) {
+						System.out.println("Resolved the Server " + server.getInstanceId());
 	        			best = server;
 	        			break;
 					}
@@ -278,6 +297,8 @@ public class LoadBalancer {
     	}
     	
     	if(best == null) {
+    		System.out.println("Launching an Instance as backup!");
+
     		autoScaler.pressureLaunchInstance();
     		best = ChooseServer(weight);
     	}
@@ -298,48 +319,56 @@ public class LoadBalancer {
     	
     	// If there's a valid average instruction
     	if(averageInstructions > 0) {
+    		System.out.println("Using calculated weight(Average Instructions): " + averageInstructions);
 	    	// Compute distance between points
 	    	double distance = Math.sqrt(Math.pow(xStart - xEnd, 2) + Math.pow(yStart - yEnd, 2));
 	    	// Get maze maximum possible distance 
 	    	double diagonal = Math.sqrt(2*Math.pow(size, 2));
 	    	// Compute distance ratio
 	    	double distanceRatio = distance/diagonal;
+	    	System.out.println("Distance Ratio: " + distanceRatio);
 	    	
 	    	// Compute velocity ratio
-	    	double velocityRatio = (1 - (velocity/100));
+	    	double velocityRatio = (1.0 - (velocity/100.0));
+	    	System.out.println("Velocity Ratio: " + velocityRatio);
 	    	
 	    	// Get Multiplier
 	    	double multiplier = distanceRatio + velocityRatio;
+	    	System.out.println("Multiplier: " + multiplier);
+	    	
 	    	// Estimate number of instructions
 	    	long estimation = (long)(averageInstructions/2 * multiplier);
-    	
+
+	    	System.out.println("Estimation: " + estimation);
     	
 	    	// Categorize the request
-	    	if(estimation <= averageInstructions * (1/5)) {
+	    	if(estimation <= (averageInstructions * (1.0/5.0))) {
 	    		//XS Category
 	    		weight = XS;
 	    	}
-	    	else if((estimation > averageInstructions * (1/5)) && (estimation <= averageInstructions * (2/5))) {
+	    	else if((estimation > (averageInstructions * (1.0/5.0))) && (estimation <= (averageInstructions * (2.0/5.0)))) {
 	    		//S Category
 	    		weight = S;
 	    	}
-	    	else if((estimation > averageInstructions * (2/5)) && (estimation <= averageInstructions * (3/5))) {
+	    	else if((estimation > (averageInstructions * (2.0/5.0))) && (estimation <= (averageInstructions * (3.0/5.0)))) {
 	    		//M Category
 	    		weight = M;
 	    	}
-	    	else if((estimation > averageInstructions * (3/5)) && (estimation <= averageInstructions * (4/5))) {
+	    	else if((estimation > (averageInstructions * (3.0/5.0))) && (estimation <= (averageInstructions * (4.0/5.0)))) {
 	    		//L Category
 	    		weight = L;
 	    	}
-	    	else if((estimation > averageInstructions * (4/5))) {
+	    	else if((estimation > (averageInstructions * (4.0/5.0)))) {
 	    		//XL Category
 	    		weight = XL;
 	    	}
     	}
     	else {
-    		weight = (int)((2/3) * maximumWeight);
+    		System.out.println("Using default weight!");
+    		weight = (int)((2/3.0) * maximumWeight);
     	}
     	
+    	System.out.println("Given weight: " + weight);
     	return weight;
     }
 }

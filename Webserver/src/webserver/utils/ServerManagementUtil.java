@@ -1,14 +1,15 @@
 package webserver.utils;
 
 import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import webserver.models.Server;
 
 public class ServerManagementUtil {
 
-	private ArrayList<Server> servers = new ArrayList<>();
+	private CopyOnWriteArrayList<Server> servers = new CopyOnWriteArrayList<>();
 
-	public synchronized ArrayList<Server> getServers(){
+	public synchronized CopyOnWriteArrayList<Server> getServers(){
 		return servers;
 	}
 	

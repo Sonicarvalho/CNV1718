@@ -14,14 +14,13 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.elasticmapreduce.model.InstanceState;
 import com.amazonaws.util.IOUtils;
 
-public class Server {
-	
+public class Server {	
 	// Instance Identifier
 	private String InstanceId;
 	// Instance Ip address
 	private String Ip;
 	// Instance Status
-	private InstanceState state;
+	private String state;
 	
 	// Instance Resolve State;
 	private boolean resolved;
@@ -49,7 +48,7 @@ public class Server {
 		return Ip;
 	}
 
-	public InstanceState getState() {
+	public String getState() {
 		return state;
 	}
 	
@@ -89,7 +88,8 @@ public class Server {
 	public boolean ping() {
     	String response = "";
     	URL url;
-
+    	int retryCount = 0;
+    	
     	if(this.Ip == null) {
     		System.out.println("The instance hasn't been resolved!");
     		return false;
@@ -98,11 +98,22 @@ public class Server {
         try {
         	System.out.println("Pinging:\nhttp://" + this.Ip + ":8000/ping");
 			url = new URL("http://" + this.Ip + ":8000/ping");
-		
-			//Open Connection to server
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-			//Send request to server and convert to string- Blocking Function
-			response = IOUtils.toString(connection.getInputStream());
+			while(retryCount < 5) {
+				try {
+					//Open Connection to server
+					HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+					//Send request to server and convert to string- Blocking Function
+					response = IOUtils.toString(connection.getInputStream());
+					
+					break;
+				}
+				catch(Exception e) {
+					retryCount++;
+					// Sleep for 10 seconds before retrying ping
+					Thread.sleep(10000);
+					System.out.println("Retrying...");
+				}
+			}
 			
 			return response.equals("Pong");
 			
@@ -131,11 +142,18 @@ public class Server {
         for (Instance instance : instances ) {
         	if(instance.getInstanceId().equals(this.InstanceId)) {
         		// Check machine state
-        		this.state = InstanceState.fromValue(instance.getState().getName());
+        		this.state = instance.getState().getName();
         		System.out.println("AWS Machine state : " + instance.getState().getName());
         		
         		// If the machine is not Running
-        		if(this.state != InstanceState.RUNNING) {
+        		if(this.state.equals("pending")) {
+        			try {
+        				// Wait 10 seconds until it changes from this state
+						Thread.sleep(20000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+        		} else if(!this.state.equals("running")) {
         			System.out.println("This AWS Machine isn't running!");
         			this.resolved = false;
         			return false;
@@ -145,8 +163,18 @@ public class Server {
         		this.Ip = instance.getPublicIpAddress();
         		
         		if(this.Ip == null) {
-        			this.resolved = false;
-        			return false;
+        			try {
+        				// Wait 10 more seconds until it gets its IP
+						Thread.sleep(10000);
+		        		this.Ip = instance.getPublicIpAddress();
+		        		
+		        		if(this.Ip == null) {
+		        			this.resolved = false;
+		        			return false;
+		        		}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
         		}
         		
         		// Try to ping machine
