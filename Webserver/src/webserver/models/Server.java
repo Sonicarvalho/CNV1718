@@ -91,6 +91,7 @@ public class Server {
     	URL url;
 
     	if(this.Ip == null) {
+    		System.out.println("The instance hasn't been resolved!");
     		return false;
     	}
     	

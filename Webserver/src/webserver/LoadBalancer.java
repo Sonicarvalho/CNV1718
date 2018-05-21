@@ -195,7 +195,12 @@ public class LoadBalancer {
         	
         	//Theres any Server available to request
         	for(Server server: serverUtil.getServers()){
-        		if(server.ping()) {
+        		if(server.isResolved() && server.ping()){
+        			totalPingable++;
+        			totalWeight += server.getWeight();
+        			alive = true;
+        		}
+        		else if(server.resolve(ec2)) {
         			totalPingable++;
         			totalWeight += server.getWeight();
         			alive = true;
